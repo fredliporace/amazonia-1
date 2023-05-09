@@ -1,5 +1,5 @@
-import stactools.ephemeral
+import stactools.amazonia_1
 
 
 def test_version() -> None:
-    assert stactools.ephemeral.__version__ is not None
+    assert stactools.amazonia_1.__version__ is not None
