@@ -18,10 +18,12 @@ def test_create_collection() -> None:
 def test_create_item() -> None:
     # Write tests for each for the creation of STAC Items
     # Create the STAC Item...
-    item = stac.create_item("/path/to/asset.tif")
+    item = stac.create_item(
+        "tests/fixtures/AMAZONIA_1_WFI_20220811_036_018_L4_BAND2.xml"
+    )
 
     # Check that it has some required attributes
-    assert item.id == "my-item-id"
+    assert item.id == "AMAZONIA_1_WFI_20220811_036_018_L4"
     # self.assertEqual(item.other_attr...
 
     # Validate
