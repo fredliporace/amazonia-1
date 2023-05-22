@@ -38,7 +38,8 @@ class CommandsTest(CliTestCase):
             # Run your custom create-item command and validate
 
             # Example:
-            infile = "/path/to/asset.tif"
+            infile = "tests/fixtures/AMAZONIA_1_WFI_20220811_036_018_L4_BAND2.xml"
+
             destination = os.path.join(tmp_dir, "item.json")
             result = self.run_command(f"amazonia1 create-item {infile} {destination}")
             assert result.exit_code == 0, "\n{}".format(result.output)
@@ -47,7 +48,7 @@ class CommandsTest(CliTestCase):
             assert len(jsons) == 1
 
             item = pystac.read_file(destination)
-            assert item.id == "my-item-id"
+            assert item.id == "AMAZONIA_1_WFI_20220811_036_018_L4"
             # assert item.other_attr...
 
             item.validate()
