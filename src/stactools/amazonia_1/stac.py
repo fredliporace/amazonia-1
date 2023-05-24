@@ -8,6 +8,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
+import utm
 from pystac import (
     Asset,
     CatalogType,
@@ -21,6 +22,8 @@ from pystac import (
     TemporalExtent,
 )
 from pystac.extensions.projection import ProjectionExtension
+from pystac.extensions.sat import OrbitState, SatExtension
+from pystac.extensions.view import ViewExtension
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +33,376 @@ TIF_XML_REGEX = re.compile(
     r"(?P<level>[^\W_]+)(?P<optics>_LEFT|_RIGHT)?_"
     r"BAND(?P<band>\d+)\.(tif|xml)"
 )
+
+COG_TYPE = "image/tiff; application=geotiff; profile=cloud-optimized"
+
+# CBERS and Amazonia-1 general missions definitions
+CBERS_AM_MISSIONS: Dict[str, Any] = {
+    "CBERS-4": {
+        "interval": [["2014-12-08T00:00:00Z", None]],
+        "quicklook": {"extension": "jpg", "type": "jpeg"},
+        "instruments": ["MUX", "AWFI", "PAN5M", "PAN10M"],
+        "band": {
+            "B1": {"common_name": "pan"},
+            "B2": {"common_name": "green"},
+            "B3": {"common_name": "red"},
+            "B4": {"common_name": "nir"},
+            "B5": {"common_name": "blue"},
+            "B6": {"common_name": "green"},
+            "B7": {"common_name": "red"},
+            "B8": {"common_name": "nir"},
+            "B13": {"common_name": "blue"},
+            "B14": {"common_name": "green"},
+            "B15": {"common_name": "red"},
+            "B16": {"common_name": "nir"},
+        },
+        "international_designator": "2014-079A",
+        "MUX": {"meta_band": 6},
+        "AWFI": {"meta_band": 14},
+        "PAN5M": {"meta_band": 1},
+        "PAN10M": {"meta_band": 4},
+        "providers": [
+            {
+                "name": "Instituto Nacional de Pesquisas Espaciais, INPE",
+                "roles": ["producer"],
+                "url": "http://www.cbers.inpe.br",
+            },
+            {
+                "name": "AMS Kepler",
+                "roles": ["processor"],
+                "description": "Convert INPE's original TIFF to COG "
+                "and copy to Amazon Web Services",
+                "url": "https://github.com/fredliporace/cbers-on-aws",
+            },
+            {
+                "name": "Amazon Web Services",
+                "roles": ["host"],
+                "url": "https://registry.opendata.aws/cbers/",
+            },
+        ],
+    },
+    "CBERS-4A": {
+        "interval": [["2019-12-20T00:00:00Z", None]],
+        "quicklook": {"extension": "png", "type": "png"},
+        "instruments": ["WPM", "MUX", "WFI"],
+        "band": {
+            "B0": {
+                "common_name": "pan",
+            },
+            "B1": {
+                # gsd is only defined for values greater than
+                # what is defined at collection level
+                "common_name": "blue",
+                "gsd": 8.0,
+            },
+            "B2": {"common_name": "green", "gsd": 8.0},
+            "B3": {"common_name": "red", "gsd": 8.0},
+            "B4": {"common_name": "nir", "gsd": 8.0},
+            "B5": {"common_name": "blue"},
+            "B6": {"common_name": "green"},
+            "B7": {"common_name": "red"},
+            "B8": {"common_name": "nir"},
+            "B13": {"common_name": "blue"},
+            "B14": {"common_name": "green"},
+            "B15": {"common_name": "red"},
+            "B16": {"common_name": "nir"},
+        },
+        "international_designator": "2019-093E",
+        "WPM": {"meta_band": 2},
+        "MUX": {"meta_band": 6},
+        "WFI": {"meta_band": 14},
+        "providers": [
+            {
+                "name": "Instituto Nacional de Pesquisas Espaciais, INPE",
+                "roles": ["producer"],
+                "url": "http://www.cbers.inpe.br",
+            },
+            {
+                "name": "AMS Kepler",
+                "roles": ["processor"],
+                "description": "Convert INPE's original TIFF to COG "
+                "and copy to Amazon Web Services",
+                "url": "https://github.com/fredliporace/cbers-on-aws",
+            },
+            {
+                "name": "Amazon Web Services",
+                "roles": ["host"],
+                "url": "https://registry.opendata.aws/cbers/",
+            },
+        ],
+    },
+    "AMAZONIA-1": {
+        "interval": [["2021-02-28T00:00:00Z", None]],
+        "quicklook": {"extension": "png", "type": "png"},
+        "instruments": ["WFI"],
+        "band": {
+            "B1": {"common_name": "blue"},
+            "B2": {"common_name": "green"},
+            "B3": {"common_name": "red"},
+            "B4": {"common_name": "nir"},
+        },
+        "international_designator": "2021-015A",
+        "WFI": {"meta_band": 2},
+        "providers": [
+            {
+                "name": "Instituto Nacional de Pesquisas Espaciais, INPE",
+                "roles": ["producer"],
+                "url": "http://www.inpe.br/amazonia1",
+            },
+            {
+                "name": "AMS Kepler",
+                "roles": ["processor"],
+                "description": "Convert INPE's original TIFF to COG "
+                "and copy to Amazon Web Services",
+                "url": "https://amskepler.com",
+            },
+            {
+                "name": "Amazon Web Services",
+                "roles": ["host"],
+                "url": "https://registry.opendata.aws/amazonia",
+            },
+        ],
+    },
+}
+
+BASE_CAMERA: Dict[str, Any] = {
+    "CBERS4": {
+        "MUX": {
+            "summaries": {
+                "gsd": [20.0],
+                "sat:platform_international_designator": [
+                    CBERS_AM_MISSIONS["CBERS-4"]["international_designator"]
+                ],
+            },
+            "item_assets": {
+                "thumbnail": {"title": "Thumbnail", "type": "image/jpeg"},
+                "metadata": {"title": "INPE original metadata", "type": "text/xml"},
+                "B5": {
+                    "type": COG_TYPE,
+                    "eo:bands": [{"name": "B5", "common_name": "blue"}],
+                },
+                "B6": {
+                    "type": COG_TYPE,
+                    "eo:bands": [{"name": "B6", "common_name": "green"}],
+                },
+                "B7": {
+                    "type": COG_TYPE,
+                    "eo:bands": [{"name": "B7", "common_name": "red"}],
+                },
+                "B8": {
+                    "type": COG_TYPE,
+                    "eo:bands": [{"name": "B8", "common_name": "nir"}],
+                },
+            },
+        },
+        "AWFI": {
+            "summaries": {
+                "gsd": [64.0],
+                "sat:platform_international_designator": [
+                    CBERS_AM_MISSIONS["CBERS-4"]["international_designator"]
+                ],
+            },
+            "item_assets": {
+                "thumbnail": {"title": "Thumbnail", "type": "image/jpeg"},
+                "metadata": {"title": "INPE original metadata", "type": "text/xml"},
+                "B13": {
+                    "type": COG_TYPE,
+                    "eo:bands": [{"name": "B13", "common_name": "blue"}],
+                },
+                "B14": {
+                    "type": COG_TYPE,
+                    "eo:bands": [{"name": "B14", "common_name": "green"}],
+                },
+                "B15": {
+                    "type": COG_TYPE,
+                    "eo:bands": [{"name": "B15", "common_name": "red"}],
+                },
+                "B16": {
+                    "type": COG_TYPE,
+                    "eo:bands": [{"name": "B16", "common_name": "nir"}],
+                },
+            },
+        },
+        "PAN5M": {
+            "summaries": {
+                "gsd": [5.0],
+                "sat:platform_international_designator": [
+                    CBERS_AM_MISSIONS["CBERS-4"]["international_designator"]
+                ],
+            },
+            "item_assets": {
+                "thumbnail": {"title": "Thumbnail", "type": "image/jpeg"},
+                "metadata": {"title": "INPE original metadata", "type": "text/xml"},
+                "B1": {
+                    "type": COG_TYPE,
+                    "eo:bands": [{"name": "B1", "common_name": "pan"}],
+                },
+            },
+        },
+        "PAN10M": {
+            "summaries": {
+                "gsd": [10.0],
+                "sat:platform_international_designator": [
+                    CBERS_AM_MISSIONS["CBERS-4"]["international_designator"]
+                ],
+            },
+            "item_assets": {
+                "thumbnail": {"title": "Thumbnail", "type": "image/jpeg"},
+                "metadata": {"title": "INPE original metadata", "type": "text/xml"},
+                "B2": {
+                    "type": COG_TYPE,
+                    "eo:bands": [{"name": "B2", "common_name": "green"}],
+                },
+                "B3": {
+                    "type": COG_TYPE,
+                    "eo:bands": [{"name": "B3", "common_name": "red"}],
+                },
+                "B4": {
+                    "type": COG_TYPE,
+                    "eo:bands": [{"name": "B4", "common_name": "nir"}],
+                },
+            },
+        },
+    },
+    "CBERS4A": {
+        "MUX": {
+            "summaries": {
+                "gsd": [16.5],
+                "sat:platform_international_designator": [
+                    CBERS_AM_MISSIONS["CBERS-4A"]["international_designator"]
+                ],
+            },
+            "item_assets": {
+                "thumbnail": {"title": "Thumbnail", "type": "image/png"},
+                "metadata": {"title": "INPE original metadata", "type": "text/xml"},
+                "B5": {
+                    "type": COG_TYPE,
+                    "eo:bands": [{"name": "B5", "common_name": "blue"}],
+                },
+                "B6": {
+                    "type": COG_TYPE,
+                    "eo:bands": [{"name": "B6", "common_name": "green"}],
+                },
+                "B7": {
+                    "type": COG_TYPE,
+                    "eo:bands": [{"name": "B7", "common_name": "red"}],
+                },
+                "B8": {
+                    "type": COG_TYPE,
+                    "eo:bands": [{"name": "B8", "common_name": "nir"}],
+                },
+            },
+        },
+        "WFI": {
+            "summaries": {
+                "gsd": [55.0],
+                "sat:platform_international_designator": [
+                    CBERS_AM_MISSIONS["CBERS-4A"]["international_designator"]
+                ],
+            },
+            "item_assets": {
+                "thumbnail": {"title": "Thumbnail", "type": "image/png"},
+                "metadata": {"title": "INPE original metadata", "type": "text/xml"},
+                "B13": {
+                    "type": COG_TYPE,
+                    "eo:bands": [{"name": "B13", "common_name": "blue"}],
+                },
+                "B14": {
+                    "type": COG_TYPE,
+                    "eo:bands": [{"name": "B14", "common_name": "green"}],
+                },
+                "B15": {
+                    "type": COG_TYPE,
+                    "eo:bands": [{"name": "B15", "common_name": "red"}],
+                },
+                "B16": {
+                    "type": COG_TYPE,
+                    "eo:bands": [{"name": "B16", "common_name": "nir"}],
+                },
+            },
+        },
+        "WPM": {
+            # First GSD should be the smaller
+            "summaries": {
+                "gsd": [2.0, 8.0],
+                "sat:platform_international_designator": [
+                    CBERS_AM_MISSIONS["CBERS-4A"]["international_designator"]
+                ],
+            },
+            "item_assets": {
+                "thumbnail": {"title": "Thumbnail", "type": "image/png"},
+                "metadata": {"title": "INPE original metadata", "type": "text/xml"},
+                "B0": {
+                    "type": COG_TYPE,
+                    "eo:bands": [{"name": "B0", "common_name": "pan"}],
+                },
+                "B1": {
+                    "type": COG_TYPE,
+                    "eo:bands": [{"name": "B1", "common_name": "blue"}],
+                },
+                "B2": {
+                    "type": COG_TYPE,
+                    "eo:bands": [{"name": "B2", "common_name": "green"}],
+                },
+                "B3": {
+                    "type": COG_TYPE,
+                    "eo:bands": [{"name": "B3", "common_name": "red"}],
+                },
+                "B4": {
+                    "type": COG_TYPE,
+                    "eo:bands": [{"name": "B4", "common_name": "nir"}],
+                },
+            },
+        },
+    },
+    "AMAZONIA1": {
+        "WFI": {
+            "summaries": {
+                "gsd": [64.0],
+                "sat:platform_international_designator": [
+                    CBERS_AM_MISSIONS["AMAZONIA-1"]["international_designator"]
+                ],
+            },
+            "item_assets": {
+                "thumbnail": {"title": "Thumbnail", "type": "image/png"},
+                "metadata": {"title": "INPE original metadata", "type": "text/xml"},
+                "B1": {
+                    "type": COG_TYPE,
+                    "eo:bands": [{"name": "B1", "common_name": "blue"}],
+                },
+                "B2": {
+                    "type": COG_TYPE,
+                    "eo:bands": [{"name": "B2", "common_name": "green"}],
+                },
+                "B3": {
+                    "type": COG_TYPE,
+                    "eo:bands": [{"name": "B3", "common_name": "red"}],
+                },
+                "B4": {
+                    "type": COG_TYPE,
+                    "eo:bands": [{"name": "B4", "common_name": "nir"}],
+                },
+            },
+        },
+    },
+}
+
+
+def _epsg_from_utm_zone(zone: int) -> int:
+    """
+    Returns the WGS-84 EPSG for a given UTM zone.
+
+    Args:
+        zone: UTM zone
+    Returns:
+        WGS-84 EPSG code
+    """
+
+    if zone > 0:
+        epsg = 32600 + zone
+    else:
+        epsg = 32700 - zone
+    return epsg
 
 
 def _build_collection_name(satellite: str, camera: str, mission: Optional[str]) -> str:
@@ -303,6 +676,126 @@ def create_collection() -> Collection:
     return collection
 
 
+# Original code from cbers_2_stac
+
+# stac_item["stac_version"] = STAC_VERSION
+# stac_item["stac_extensions"] = [
+#     "https://stac-extensions.github.io/eo/v1.0.0/schema.json",
+# ]
+
+# stac_item["type"] = "Feature"
+
+
+# # Collection
+# stac_item["collection"] = cbers_am["collection"]
+
+# # Links
+# meta_prefix = f"https://s3.amazonaws.com/{buckets['metadata']}/"
+# main_prefix = f"s3://{buckets['cog']}/"
+# stac_prefix = f"https://{buckets['stac']}.s3.amazonaws.com/"
+# # https://s3.amazonaws.com/cbers-meta-pds/CBERS4/MUX/066/096/
+# # CBERS_4_MUX_20170522_066_096_L2/CBERS_4_MUX_20170522_066_096.jpg
+# stac_item["links"] = []
+
+# # links, self
+# stac_item["links"].append(
+#     build_link(
+#         "self",
+#         build_absolute_prefix(
+#             buckets["stac"],
+#             cbers_am["sat_sensor"],
+#             int(cbers_am["path"]),
+#             int(cbers_am["row"]),
+#         )
+#         + stac_item["id"]
+#         + ".json",
+#     )
+# )
+
+# # links, parent
+# stac_item["links"].append(
+#     build_link(
+#         "parent",
+#         build_absolute_prefix(
+#             buckets["stac"],
+#             cbers_am["sat_sensor"],
+#             int(cbers_am["path"]),
+#             int(cbers_am["row"]),
+#         )
+#         + "catalog.json",
+#     )
+# )
+
+# # link, collection
+# stac_item["links"].append(
+#     build_link(
+#         rel="collection",
+#         href=stac_prefix
+#         + cbers_am["mission"]
+#         + cbers_am["number"]
+#         + "/"
+#         + cbers_am["sensor"]
+#         + "/collection.json",
+#     )
+# )
+
+# # EO section
+# # Missing fields (not available from CBERS metadata)
+# # eo:cloud_cover
+
+# # CBERS section
+# stac_item["properties"][f"{cbers_am['mission'].lower()}:data_type"] = (
+#     "L" + cbers_am["processing_level"]
+# )
+# stac_item["properties"][f"{cbers_am['mission'].lower()}:path"] = int(
+#     cbers_am["path"]
+# )
+# stac_item["properties"][f"{cbers_am['mission'].lower()}:row"] = int(cbers_am["row"])
+
+# # Assets
+# stac_item["assets"] = OrderedDict()
+# stac_item["assets"]["thumbnail"] = build_asset(
+#     meta_prefix
+#     + cbers_am["download_url"]
+#     + "/"
+#     + cbers_am["no_level_id"]
+#     + "."
+#     + CBERS_AM_MISSIONS[cbers_am["sat_number"]]["quicklook"]["extension"],
+#     cbers_am["sat_number"],
+#     asset_type="image/"
+#     + CBERS_AM_MISSIONS[cbers_am["sat_number"]]["quicklook"]["type"],
+# )
+
+# stac_item["assets"]["metadata"] = build_asset(
+#     main_prefix + cbers_am["download_url"] + "/" + cbers_am["meta_file"],
+#     cbers_am["sat_number"],
+#     asset_type="text/xml",
+#     title="INPE original metadata",
+# )
+# for band in cbers_am["bands"]:
+#     band_id = "B" + band
+#     gsd = CBERS_AM_MISSIONS[cbers_am["sat_number"]]["band"][band_id].get("gsd")
+#     if gsd:
+#         properties = {"gsd": gsd}
+#     else:
+#         properties = None
+#     stac_item["assets"][band_id] = build_asset(
+#         main_prefix
+#         + cbers_am["download_url"]
+#         + "/"
+#         + stac_item["id"]
+#         + cbers_am["optics"]
+#         + "_BAND"
+#         + band
+#         + ".tif",
+#         cbers_am["sat_number"],
+#         asset_type="image/tiff; application=geotiff; " "profile=cloud-optimized",
+#         band_id=band_id,
+#         properties=properties,
+#     )
+# return stac_item
+
+
 def create_item(asset_href: str) -> Item:
     """Create a STAC Item
 
@@ -320,18 +813,24 @@ def create_item(asset_href: str) -> Item:
 
     cbers_am = _get_keys_from_cbers_am(asset_href)
 
-    properties = {
-        "title": "A dummy STAC Item",
-        "description": "Used for demonstration purposes",
+    geom = {
+        "type": "MultiPolygon",
+        "coordinates": [
+            [
+                [
+                    (float(cbers_am["ll_lon"]), float(cbers_am["ll_lat"])),
+                    (float(cbers_am["lr_lon"]), float(cbers_am["lr_lat"])),
+                    (float(cbers_am["ur_lon"]), float(cbers_am["ur_lat"])),
+                    (float(cbers_am["ul_lon"]), float(cbers_am["ul_lat"])),
+                    (float(cbers_am["ll_lon"]), float(cbers_am["ll_lat"])),
+                ]
+            ]
+        ],
     }
 
-    demo_geom = {
-        "type": "Polygon",
-        "coordinates": [[[-180, -90], [180, -90], [180, 90], [-180, 90], [-180, -90]]],
-    }
-
-    # Time must be in UTC
-    demo_time = datetime.now(tz=timezone.utc)
+    date_time = cbers_am["acquisition_date"].replace(" ", "T")
+    # Remove microseconds info
+    date_time = re.sub(r"\.\d+", "+00:00", date_time)
 
     item = Item(
         id=(
@@ -346,19 +845,55 @@ def create_item(asset_href: str) -> Item:
                 cbers_am["processing_level"],
             )
         ),
-        properties=properties,
-        geometry=demo_geom,
-        bbox=[-180, 90, 180, -90],
-        datetime=demo_time,
-        stac_extensions=[],
+        properties={},
+        geometry=geom,
+        # Order is lower left lon, lat; upper right lon, lat
+        bbox=[
+            float(cbers_am["bb_ll_lon"]),
+            float(cbers_am["bb_ll_lat"]),
+            float(cbers_am["bb_ur_lon"]),
+            float(cbers_am["bb_ur_lat"]),
+        ],
+        datetime=datetime.fromisoformat(date_time),
     )
 
-    # It is a good idea to include proj attributes to optimize for libs like stac-vrt
-    proj_attrs = ProjectionExtension.ext(item, add_if_missing=True)
-    proj_attrs.epsg = 4326
-    proj_attrs.bbox = [-180, 90, 180, -90]
-    proj_attrs.shape = [1, 1]  # Raster shape
-    proj_attrs.transform = [-180, 360, 0, 90, 0, 180]  # Raster GeoTransform
+    item.common_metadata.platform = cbers_am["sat_number"].lower()
+    item.common_metadata.instruments = [cbers_am["sensor"]]
+    item.common_metadata.gsd = BASE_CAMERA[
+        f"{cbers_am['mission']}{cbers_am['number']}"
+    ][cbers_am["sensor"]]["summaries"]["gsd"][0]
+
+    # view extension
+    view = ViewExtension.ext(item, add_if_missing=True)
+    view.sun_azimuth = float(cbers_am["sun_azimuth"])
+    view.sun_elevation = float(cbers_am["sun_elevation"])
+    view.off_nadir = abs(float(cbers_am["roll"]))
+
+    # sat extension
+    sat = SatExtension.ext(item, add_if_missing=True)
+    sat.platform_international_designator = CBERS_AM_MISSIONS[cbers_am["sat_number"]][
+        "international_designator"
+    ]
+    sat.orbit_state = (
+        OrbitState.DESCENDING if float(cbers_am["vz"]) < 0 else OrbitState.ASCENDING
+    )
+
+    # proj extension
+    proj = ProjectionExtension.ext(item, add_if_missing=True)
+    assert cbers_am["projection_name"] == "UTM", (
+        "Unsupported projection " + cbers_am["projection_name"]
+    )
+    utm_zone = int(
+        utm.from_latlon(float(cbers_am["ct_lat"]), float(cbers_am["ct_lon"]))[2]
+    )
+    if float(cbers_am["ct_lat"]) < 0.0:
+        utm_zone *= -1
+    proj.epsg = _epsg_from_utm_zone(utm_zone)
+
+    # todo: check title and description
+    # properties = {
+    #    "title": "A dummy STAC Item",
+    #    "description": "Used for demonstration purposes",
 
     # Add an asset to the item (COG for example)
     item.add_asset(
