@@ -318,15 +318,12 @@ def create_collection() -> Collection:
     return collection
 
 
-# Original code from cbers_2_stac
+# Original code from cbers_2_stac, will be removed as incorporated to
+# create_item, create_collection
 
-# stac_item["stac_version"] = STAC_VERSION
 # stac_item["stac_extensions"] = [
 #     "https://stac-extensions.github.io/eo/v1.0.0/schema.json",
 # ]
-
-# stac_item["type"] = "Feature"
-
 
 # # Collection
 # stac_item["collection"] = cbers_am["collection"]
@@ -384,15 +381,6 @@ def create_collection() -> Collection:
 # # EO section
 # # Missing fields (not available from CBERS metadata)
 # # eo:cloud_cover
-
-# # CBERS section
-# stac_item["properties"][f"{cbers_am['mission'].lower()}:data_type"] = (
-#     "L" + cbers_am["processing_level"]
-# )
-# stac_item["properties"][f"{cbers_am['mission'].lower()}:path"] = int(
-#     cbers_am["path"]
-# )
-# stac_item["properties"][f"{cbers_am['mission'].lower()}:row"] = int(cbers_am["row"])
 
 # # Assets
 # stac_item["assets"] = OrderedDict()
@@ -531,6 +519,23 @@ def create_item(asset_href: str) -> Item:
     if float(cbers_am["ct_lat"]) < 0.0:
         utm_zone *= -1
     proj.epsg = _epsg_from_utm_zone(utm_zone)
+
+    # cbers/amazonia section
+    item.properties.update(
+        {
+            f"{cbers_am['mission'].lower()}:data_type": "L"
+            + cbers_am["processing_level"],
+            f"{cbers_am['mission'].lower()}:path": int(cbers_am["path"]),
+            f"{cbers_am['mission'].lower()}:row": int(cbers_am["row"]),
+        }
+    )
+    # stac_item["properties"][f"{cbers_am['mission'].lower()}:data_type"] = (
+    #     "L" + cbers_am["processing_level"]
+    # )
+    # stac_item["properties"][f"{cbers_am['mission'].lower()}:path"] = int(
+    #     cbers_am["path"]
+    # )
+    # stac_item["properties"][f"{cbers_am['mission'].lower()}:row"] = int(cbers_am["row"])
 
     # todo: check title and description
     # properties = {

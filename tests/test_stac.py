@@ -62,8 +62,13 @@ def test_create_item() -> None:
     assert item.properties["sat:platform_international_designator"] == "2021-015A"
     assert item.properties["sat:orbit_state"] == "descending"
 
-    # # properties:proj
+    # properties:proj
     assert item.properties["proj:epsg"] == 32722
+
+    # properties:amazonia
+    assert item.properties["amazonia:data_type"] == "L4"
+    assert item.properties["amazonia:path"] == 36
+    assert item.properties["amazonia:row"] == 18
 
     # extensions schemas
     assert len(item.stac_extensions) == 3
@@ -88,11 +93,6 @@ def test_create_item() -> None:
 
     # # bbox
     # assert len(smeta["bbox"]) == 4
-
-    # # properties:amazonia
-    # assert smeta["properties"]["amazonia:data_type"] == "L4"
-    # assert smeta["properties"]["amazonia:path"] == 36
-    # assert smeta["properties"]["amazonia:row"] == 18
 
     # # assets
     # assert (
