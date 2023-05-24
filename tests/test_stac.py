@@ -1,5 +1,7 @@
 """test_stac."""
 
+import datetime
+
 from stactools.amazonia_1 import stac
 
 
@@ -28,13 +30,13 @@ def test_create_item() -> None:
     )
 
     assert item.id == "AMAZONIA_1_WFI_20220811_036_018_L4"
-    # todo: check Z
     assert item.datetime is not None
-    assert item.datetime.isoformat() == "2022-08-11T14:01:37"
+    assert item.datetime.isoformat() == "2022-08-11T14:01:37+00:00"
+    assert item.datetime.tzinfo == datetime.timezone.utc
 
-    assert item.properties["platform"] == "amazonia-1"
-    assert item.properties["instruments"] == ["WFI"]
-    assert item.properties["gsd"] == 64
+    assert item.common_metadata.platform == "amazonia-1"
+    assert item.common_metadata.instruments == ["WFI"]
+    assert item.common_metadata.gsd == 64
 
     assert item.geometry is not None
     assert item.geometry["coordinates"] == [
@@ -51,7 +53,7 @@ def test_create_item() -> None:
 
     assert item.bbox == [-58.437218, -21.861746, -48.692586, -13.777946]
 
-    # properties:view
+    # properties/:view
     assert item.properties["view:sun_elevation"] == 50.042550000000006
     assert item.properties["view:sun_azimuth"] == 35.9219
     assert item.properties["view:off_nadir"] == 0.000416261
@@ -59,6 +61,24 @@ def test_create_item() -> None:
     # properties:sat
     assert item.properties["sat:platform_international_designator"] == "2021-015A"
     assert item.properties["sat:orbit_state"] == "descending"
+
+    # # properties:proj
+    assert item.properties["proj:epsg"] == 32722
+
+    # extensions schemas
+    assert len(item.stac_extensions) == 3
+    assert (
+        "https://stac-extensions.github.io/view/v1.0.0/schema.json"
+        in item.stac_extensions
+    )
+    assert (
+        "https://stac-extensions.github.io/sat/v1.0.0/schema.json"
+        in item.stac_extensions
+    )
+    assert (
+        "https://stac-extensions.github.io/projection/v1.1.0/schema.json"
+        in item.stac_extensions
+    )
 
     # meta = get_keys_from_cbers_am(
     #     "test/fixtures/AMAZONIA_1_WFI_20220811_036_018_L4_BAND2.xml"
@@ -68,9 +88,6 @@ def test_create_item() -> None:
 
     # # bbox
     # assert len(smeta["bbox"]) == 4
-
-    # # properties:proj
-    # assert smeta["properties"]["proj:epsg"] == 32722
 
     # # properties:amazonia
     # assert smeta["properties"]["amazonia:data_type"] == "L4"

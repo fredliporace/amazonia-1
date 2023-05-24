@@ -8,6 +8,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
+import utm
 from pystac import (
     Asset,
     CatalogType,
@@ -21,6 +22,8 @@ from pystac import (
     TemporalExtent,
 )
 from pystac.extensions.projection import ProjectionExtension
+from pystac.extensions.sat import OrbitState, SatExtension
+from pystac.extensions.view import ViewExtension
 
 logger = logging.getLogger(__name__)
 
@@ -385,6 +388,23 @@ BASE_CAMERA: Dict[str, Any] = {
 }
 
 
+def _epsg_from_utm_zone(zone: int) -> int:
+    """
+    Returns the WGS-84 EPSG for a given UTM zone.
+
+    Args:
+        zone: UTM zone
+    Returns:
+        WGS-84 EPSG code
+    """
+
+    if zone > 0:
+        epsg = 32600 + zone
+    else:
+        epsg = 32700 - zone
+    return epsg
+
+
 def _build_collection_name(satellite: str, camera: str, mission: Optional[str]) -> str:
     """Build collection names.
 
@@ -723,18 +743,6 @@ def create_collection() -> Collection:
 # # Missing fields (not available from CBERS metadata)
 # # eo:cloud_cover
 
-
-# # PROJECTION extension
-# assert cbers_am["projection_name"] == "UTM", (
-#     "Unsupported projection " + cbers_am["projection_name"]
-# )
-# utm_zone = int(
-#     utm.from_latlon(float(cbers_am["ct_lat"]), float(cbers_am["ct_lon"]))[2]
-# )
-# if float(cbers_am["ct_lat"]) < 0.0:
-#     utm_zone *= -1
-# stac_item["properties"]["proj:epsg"] = int(epsg_from_utm_zone(utm_zone))
-
 # # CBERS section
 # stac_item["properties"][f"{cbers_am['mission'].lower()}:data_type"] = (
 #     "L" + cbers_am["processing_level"]
@@ -805,25 +813,6 @@ def create_item(asset_href: str) -> Item:
 
     cbers_am = _get_keys_from_cbers_am(asset_href)
 
-    properties = {
-        "title": "A dummy STAC Item",
-        "description": "Used for demonstration purposes",
-        "platform": cbers_am["sat_number"].lower(),
-        "instruments": [cbers_am["sensor"]],
-        "gsd": BASE_CAMERA[f"{cbers_am['mission']}{cbers_am['number']}"][
-            cbers_am["sensor"]
-        ]["summaries"]["gsd"][0],
-        # VIEW extension
-        "view:sun_azimuth": float(cbers_am["sun_azimuth"]),
-        "view:sun_elevation": float(cbers_am["sun_elevation"]),
-        "view:off_nadir": abs(float(cbers_am["roll"])),
-        # SATELLITE extension
-        "sat:platform_international_designator": CBERS_AM_MISSIONS[
-            cbers_am["sat_number"]
-        ]["international_designator"],
-        "sat:orbit_state": ("descending" if float(cbers_am["vz"]) < 0 else "ascending"),
-    }
-
     geom = {
         "type": "MultiPolygon",
         "coordinates": [
@@ -841,7 +830,7 @@ def create_item(asset_href: str) -> Item:
 
     date_time = cbers_am["acquisition_date"].replace(" ", "T")
     # Remove microseconds info
-    date_time = re.sub(r"\.\d+", "", date_time)
+    date_time = re.sub(r"\.\d+", "+00:00", date_time)
 
     item = Item(
         id=(
@@ -856,7 +845,7 @@ def create_item(asset_href: str) -> Item:
                 cbers_am["processing_level"],
             )
         ),
-        properties=properties,
+        properties={},
         geometry=geom,
         # Order is lower left lon, lat; upper right lon, lat
         bbox=[
@@ -866,18 +855,45 @@ def create_item(asset_href: str) -> Item:
             float(cbers_am["bb_ur_lat"]),
         ],
         datetime=datetime.fromisoformat(date_time),
-        stac_extensions=[
-            "https://stac-extensions.github.io/view/v1.0.0/schema.json",
-            "https://stac-extensions.github.io/sat/v1.0.0/schema.json",
-        ],
     )
 
-    # It is a good idea to include proj attributes to optimize for libs like stac-vrt
-    proj_attrs = ProjectionExtension.ext(item, add_if_missing=True)
-    proj_attrs.epsg = 4326
-    proj_attrs.bbox = [-180, 90, 180, -90]
-    proj_attrs.shape = [1, 1]  # Raster shape
-    proj_attrs.transform = [-180, 360, 0, 90, 0, 180]  # Raster GeoTransform
+    item.common_metadata.platform = cbers_am["sat_number"].lower()
+    item.common_metadata.instruments = [cbers_am["sensor"]]
+    item.common_metadata.gsd = BASE_CAMERA[
+        f"{cbers_am['mission']}{cbers_am['number']}"
+    ][cbers_am["sensor"]]["summaries"]["gsd"][0]
+
+    # view extension
+    view = ViewExtension.ext(item, add_if_missing=True)
+    view.sun_azimuth = float(cbers_am["sun_azimuth"])
+    view.sun_elevation = float(cbers_am["sun_elevation"])
+    view.off_nadir = abs(float(cbers_am["roll"]))
+
+    # sat extension
+    sat = SatExtension.ext(item, add_if_missing=True)
+    sat.platform_international_designator = CBERS_AM_MISSIONS[cbers_am["sat_number"]][
+        "international_designator"
+    ]
+    sat.orbit_state = (
+        OrbitState.DESCENDING if float(cbers_am["vz"]) < 0 else OrbitState.ASCENDING
+    )
+
+    # proj extension
+    proj = ProjectionExtension.ext(item, add_if_missing=True)
+    assert cbers_am["projection_name"] == "UTM", (
+        "Unsupported projection " + cbers_am["projection_name"]
+    )
+    utm_zone = int(
+        utm.from_latlon(float(cbers_am["ct_lat"]), float(cbers_am["ct_lon"]))[2]
+    )
+    if float(cbers_am["ct_lat"]) < 0.0:
+        utm_zone *= -1
+    proj.epsg = _epsg_from_utm_zone(utm_zone)
+
+    # todo: check title and description
+    # properties = {
+    #    "title": "A dummy STAC Item",
+    #    "description": "Used for demonstration purposes",
 
     # Add an asset to the item (COG for example)
     item.add_asset(
