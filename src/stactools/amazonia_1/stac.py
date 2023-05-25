@@ -322,10 +322,6 @@ def create_collection() -> Collection:
 # Original code from cbers_2_stac, will be removed as incorporated to
 # create_item, create_collection
 
-# stac_item["stac_extensions"] = [
-#     "https://stac-extensions.github.io/eo/v1.0.0/schema.json",
-# ]
-
 # # Collection
 # stac_item["collection"] = cbers_am["collection"]
 
@@ -378,10 +374,6 @@ def create_collection() -> Collection:
 #         + "/collection.json",
 #     )
 # )
-
-# # EO section
-# # Missing fields (not available from CBERS metadata)
-# # eo:cloud_cover
 
 
 def create_item(asset_href: str) -> Item:
@@ -487,13 +479,10 @@ def create_item(asset_href: str) -> Item:
         }
     )
 
-    # todo: check title and description
-    # properties = {
-    #    "title": "A dummy STAC Item",
-    #    "description": "Used for demonstration purposes",
-
+    # Metadata bucket
     meta_prefix = "https://s3.amazonaws.com/amazonia-meta-pds/"
-    main_prefix = "s3://amazonia-pds/"
+    # COG bucket
+    main_prefix = "s3://cbers-pds/"
 
     # Thumbnail asset
     item.add_asset(
@@ -515,15 +504,10 @@ def create_item(asset_href: str) -> Item:
     # INPE's metadata
     item.add_asset(
         key="metadata",
-        asset=Asset.from_dict(
-            {
-                "href": main_prefix
-                + cbers_am["download_url"]
-                + "/"
-                + cbers_am["meta_file"],
-                "title": "INPE original metadata",
-                "type": "text/xml",
-            }
+        asset=Asset(
+            href=main_prefix + cbers_am["download_url"] + "/" + cbers_am["meta_file"],
+            title="INPE original metadata",
+            media_type=MediaType.XML,
         ),
     )
 
@@ -565,14 +549,14 @@ def create_item(asset_href: str) -> Item:
         ]
 
     # Add an asset to the item (COG for example)
-    item.add_asset(
-        "image",
-        Asset(
-            href=asset_href,
-            media_type=MediaType.COG,
-            roles=["data"],
-            title="A dummy STAC Item COG",
-        ),
-    )
+    # item.add_asset(
+    #     "image",
+    #     Asset(
+    #         href=asset_href,
+    #         media_type=MediaType.COG,
+    #         roles=["data"],
+    #         title="A dummy STAC Item COG",
+    #     ),
+    # )
 
     return item
