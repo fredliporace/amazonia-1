@@ -515,11 +515,12 @@ def create_item(asset_href: str) -> Item:
     for band in cbers_am["bands"]:
         band_id = "B" + band
         # Check gsd here, if not defined we use the collection's value.
-        gsd = CBERS_AM_MISSIONS[cbers_am["sat_number"]]["band"][band_id].get("gsd")
-        if gsd:
-            properties = {"gsd": gsd}
-        else:
-            properties = {}
+        # This is only used for CBERS 4 PAN5/PAN10 case
+        # gsd = CBERS_AM_MISSIONS[cbers_am["sat_number"]]["band"][band_id].get("gsd")
+        # if gsd:
+        #     properties = {"gsd": gsd}
+        # else:
+        #     properties = {}
         asset = Asset.from_dict(
             {
                 "href": main_prefix
@@ -532,7 +533,6 @@ def create_item(asset_href: str) -> Item:
                 + ".tif",
                 "type": "image/tiff; application=geotiff; " "profile=cloud-optimized",
             }
-            | properties
         )
         item.add_asset(
             key=band_id,
