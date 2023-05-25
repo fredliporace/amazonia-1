@@ -21,6 +21,7 @@ from pystac import (
     SpatialExtent,
     TemporalExtent,
 )
+from pystac.extensions.eo import Band, EOExtension
 from pystac.extensions.projection import ProjectionExtension
 from pystac.extensions.sat import OrbitState, SatExtension
 from pystac.extensions.view import ViewExtension
@@ -382,49 +383,6 @@ def create_collection() -> Collection:
 # # Missing fields (not available from CBERS metadata)
 # # eo:cloud_cover
 
-# # Assets
-# stac_item["assets"] = OrderedDict()
-# stac_item["assets"]["thumbnail"] = build_asset(
-#     meta_prefix
-#     + cbers_am["download_url"]
-#     + "/"
-#     + cbers_am["no_level_id"]
-#     + "."
-#     + CBERS_AM_MISSIONS[cbers_am["sat_number"]]["quicklook"]["extension"],
-#     cbers_am["sat_number"],
-#     asset_type="image/"
-#     + CBERS_AM_MISSIONS[cbers_am["sat_number"]]["quicklook"]["type"],
-# )
-
-# stac_item["assets"]["metadata"] = build_asset(
-#     main_prefix + cbers_am["download_url"] + "/" + cbers_am["meta_file"],
-#     cbers_am["sat_number"],
-#     asset_type="text/xml",
-#     title="INPE original metadata",
-# )
-# for band in cbers_am["bands"]:
-#     band_id = "B" + band
-#     gsd = CBERS_AM_MISSIONS[cbers_am["sat_number"]]["band"][band_id].get("gsd")
-#     if gsd:
-#         properties = {"gsd": gsd}
-#     else:
-#         properties = None
-#     stac_item["assets"][band_id] = build_asset(
-#         main_prefix
-#         + cbers_am["download_url"]
-#         + "/"
-#         + stac_item["id"]
-#         + cbers_am["optics"]
-#         + "_BAND"
-#         + band
-#         + ".tif",
-#         cbers_am["sat_number"],
-#         asset_type="image/tiff; application=geotiff; " "profile=cloud-optimized",
-#         band_id=band_id,
-#         properties=properties,
-#     )
-# return stac_item
-
 
 def create_item(asset_href: str) -> Item:
     """Create a STAC Item
@@ -462,19 +420,18 @@ def create_item(asset_href: str) -> Item:
     # Remove microseconds info
     date_time = re.sub(r"\.\d+", "+00:00", date_time)
 
+    item_id = "%s_%s_%s_%s_%03d_%03d_L%s" % (
+        cbers_am["mission"],
+        cbers_am["number"],
+        cbers_am["sensor"],
+        cbers_am["acquisition_day"].replace("-", ""),
+        int(cbers_am["path"]),
+        int(cbers_am["row"]),
+        cbers_am["processing_level"],
+    )
+
     item = Item(
-        id=(
-            "%s_%s_%s_%s_%03d_%03d_L%s"
-            % (
-                cbers_am["mission"],
-                cbers_am["number"],
-                cbers_am["sensor"],
-                cbers_am["acquisition_day"].replace("-", ""),
-                int(cbers_am["path"]),
-                int(cbers_am["row"]),
-                cbers_am["processing_level"],
-            )
-        ),
+        id=item_id,
         properties={},
         geometry=geom,
         # Order is lower left lon, lat; upper right lon, lat
@@ -529,18 +486,83 @@ def create_item(asset_href: str) -> Item:
             f"{cbers_am['mission'].lower()}:row": int(cbers_am["row"]),
         }
     )
-    # stac_item["properties"][f"{cbers_am['mission'].lower()}:data_type"] = (
-    #     "L" + cbers_am["processing_level"]
-    # )
-    # stac_item["properties"][f"{cbers_am['mission'].lower()}:path"] = int(
-    #     cbers_am["path"]
-    # )
-    # stac_item["properties"][f"{cbers_am['mission'].lower()}:row"] = int(cbers_am["row"])
 
     # todo: check title and description
     # properties = {
     #    "title": "A dummy STAC Item",
     #    "description": "Used for demonstration purposes",
+
+    meta_prefix = "https://s3.amazonaws.com/amazonia-meta-pds/"
+    main_prefix = "s3://amazonia-pds/"
+
+    # Thumbnail asset
+    item.add_asset(
+        key="thumbnail",
+        asset=Asset.from_dict(
+            {
+                "href": meta_prefix
+                + cbers_am["download_url"]
+                + "/"
+                + cbers_am["no_level_id"]
+                + "."
+                + CBERS_AM_MISSIONS[cbers_am["sat_number"]]["quicklook"]["extension"],
+                "type": "image/"
+                + CBERS_AM_MISSIONS[cbers_am["sat_number"]]["quicklook"]["type"],
+            }
+        ),
+    )
+
+    # INPE's metadata
+    item.add_asset(
+        key="metadata",
+        asset=Asset.from_dict(
+            {
+                "href": main_prefix
+                + cbers_am["download_url"]
+                + "/"
+                + cbers_am["meta_file"],
+                "title": "INPE original metadata",
+                "type": "text/xml",
+            }
+        ),
+    )
+
+    # COGs
+    for band in cbers_am["bands"]:
+        band_id = "B" + band
+        # Check gsd here, if not defined we use the collection's value.
+        gsd = CBERS_AM_MISSIONS[cbers_am["sat_number"]]["band"][band_id].get("gsd")
+        if gsd:
+            properties = {"gsd": gsd}
+        else:
+            properties = {}
+        asset = Asset.from_dict(
+            {
+                "href": main_prefix
+                + cbers_am["download_url"]
+                + "/"
+                + item_id
+                + cbers_am["optics"]
+                + "_BAND"
+                + band
+                + ".tif",
+                "type": "image/tiff; application=geotiff; " "profile=cloud-optimized",
+            }
+            | properties
+        )
+        item.add_asset(
+            key=band_id,
+            asset=asset,
+        )
+        optical_eo = EOExtension.ext(asset, add_if_missing=True)
+        optical_eo.bands = [
+            Band.create(
+                name=band_id,
+                common_name=CBERS_AM_MISSIONS[cbers_am["sat_number"]]["band"][band_id][
+                    "common_name"
+                ],
+            )
+        ]
 
     # Add an asset to the item (COG for example)
     item.add_asset(

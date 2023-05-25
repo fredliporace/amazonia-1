@@ -71,7 +71,7 @@ def test_create_item() -> None:
     assert item.properties["amazonia:row"] == 18
 
     # extensions schemas
-    assert len(item.stac_extensions) == 3
+    assert len(item.stac_extensions) == 4
     assert (
         "https://stac-extensions.github.io/view/v1.0.0/schema.json"
         in item.stac_extensions
@@ -82,6 +82,10 @@ def test_create_item() -> None:
     )
     assert (
         "https://stac-extensions.github.io/projection/v1.1.0/schema.json"
+        in item.stac_extensions
+    )
+    assert (
+        "https://stac-extensions.github.io/eo/v1.0.0/schema.json"
         in item.stac_extensions
     )
 
