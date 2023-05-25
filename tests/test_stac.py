@@ -24,7 +24,7 @@ def test_create_collection() -> None:
 def test_create_item() -> None:
     """test_create_item."""
 
-    # Create the STAC Item...
+    # Create the STAC Item, combined (LEFT+RIGHT optics)
     item = stac.create_item(
         "tests/fixtures/AMAZONIA_1_WFI_20220811_036_018_L4_BAND2.xml"
     )
@@ -53,7 +53,7 @@ def test_create_item() -> None:
 
     assert item.bbox == [-58.437218, -21.861746, -48.692586, -13.777946]
 
-    # properties/:view
+    # properties:view
     assert item.properties["view:sun_elevation"] == 50.042550000000006
     assert item.properties["view:sun_azimuth"] == 35.9219
     assert item.properties["view:off_nadir"] == 0.000416261
@@ -71,7 +71,7 @@ def test_create_item() -> None:
     assert item.properties["amazonia:row"] == 18
 
     # extensions schemas
-    assert len(item.stac_extensions) == 3
+    assert len(item.stac_extensions) == 4
     assert (
         "https://stac-extensions.github.io/view/v1.0.0/schema.json"
         in item.stac_extensions
@@ -84,81 +84,68 @@ def test_create_item() -> None:
         "https://stac-extensions.github.io/projection/v1.1.0/schema.json"
         in item.stac_extensions
     )
+    assert (
+        "https://stac-extensions.github.io/eo/v1.0.0/schema.json"
+        in item.stac_extensions
+    )
 
-    # meta = get_keys_from_cbers_am(
-    #     "test/fixtures/AMAZONIA_1_WFI_20220811_036_018_L4_BAND2.xml"
-    # )
-    # buckets = {"metadata": "cbers-meta-pds", "cog": "cbers-pds", "stac": "cbers-stac"}
-    # smeta = build_stac_item_keys(meta, buckets)
+    # assets
+    assert (
+        item.assets["thumbnail"].href
+        == "https://s3.amazonaws.com/amazonia-meta-pds/AMAZONIA1/WFI/036/018/"
+        "AMAZONIA_1_WFI_20220811_036_018_L4/AMAZONIA_1_WFI_20220811_036_018.png"
+    )
+    assert (
+        item.assets["metadata"].href
+        == "s3://cbers-pds/AMAZONIA1/WFI/036/018/AMAZONIA_1_WFI_20220811_036_018_L4/"
+        "AMAZONIA_1_WFI_20220811_036_018_L4_BAND2.xml"
+    )
+    assert (
+        item.assets["B2"].href
+        == "s3://cbers-pds/AMAZONIA1/WFI/036/018/AMAZONIA_1_WFI_20220811_036_018_L4/"
+        "AMAZONIA_1_WFI_20220811_036_018_L4_BAND2.tif"
+    )
 
-    # # bbox
-    # assert len(smeta["bbox"]) == 4
+    # Create the STAC Item, single optic (LEFT)
+    item = stac.create_item(
+        "tests/fixtures/AMAZONIA_1_WFI_20220810_033_018_L4_LEFT_BAND2.xml"
+    )
 
-    # # assets
-    # assert (
-    #     smeta["assets"]["thumbnail"]["href"]
-    #     == "https://s3.amazonaws.com/cbers-meta-pds/AMAZONIA1/WFI/036/018/"
-    #     "AMAZONIA_1_WFI_20220811_036_018_L4/AMAZONIA_1_WFI_20220811_036_018.png"
-    # )
-    # assert (
-    #     smeta["assets"]["metadata"]["href"]
-    #     == "s3://cbers-pds/AMAZONIA1/WFI/036/018/AMAZONIA_1_WFI_20220811_036_018_L4/"
-    #     "AMAZONIA_1_WFI_20220811_036_018_L4_BAND2.xml"
-    # )
-    # assert (
-    #     smeta["assets"]["B2"]["href"]
-    #     == "s3://cbers-pds/AMAZONIA1/WFI/036/018/AMAZONIA_1_WFI_20220811_036_018_L4/"
-    #     "AMAZONIA_1_WFI_20220811_036_018_L4_BAND2.tif"
-    # )
+    assert item.id == "AMAZONIA_1_WFI_20220810_033_018_L4"
+    assert item.datetime is not None
+    assert item.datetime.isoformat() == "2022-08-10T13:01:35+00:00"
+    assert item.datetime.tzinfo == datetime.timezone.utc
+    assert item.bbox == [-43.422677, -21.25324, -37.558733, -13.72715]
 
-    # # LEFT case
-    # meta = get_keys_from_cbers_am(
-    #     "test/fixtures/AMAZONIA_1_WFI_20220810_033_018_L4_LEFT_BAND2.xml"
-    # )
-    # buckets = {"metadata": "cbers-meta-pds", "cog": "cbers-pds", "stac": "cbers-stac"}
-    # smeta = build_stac_item_keys(meta, buckets)
+    # properties:view
+    assert item.properties["view:sun_elevation"] == 48.9478
+    assert item.properties["view:sun_azimuth"] == 38.3485
+    assert item.properties["view:off_nadir"] == 0.000120206
 
-    # # id
-    # assert smeta["id"] == "AMAZONIA_1_WFI_20220810_033_018_L4"
+    # properties:proj
+    assert item.properties["proj:epsg"] == 32724
 
-    # # bbox
-    # assert len(smeta["bbox"]) == 4
+    # properties:amazonia
+    assert item.properties["amazonia:data_type"] == "L4"
+    assert item.properties["amazonia:path"] == 33
+    assert item.properties["amazonia:row"] == 18
 
-    # # geometry is built like other cameras, correct computation
-    # # is checked in test_get_keys_from_cbers4a
-
-    # # properties
-    # assert smeta["properties"]["datetime"] == "2022-08-10T13:01:35Z"
-
-    # # properties:view
-    # assert smeta["properties"]["view:sun_elevation"] == 48.9478
-    # assert smeta["properties"]["view:sun_azimuth"] == 38.3485
-    # assert smeta["properties"]["view:off_nadir"] == 0.000120206
-
-    # # properties:proj
-    # assert smeta["properties"]["proj:epsg"] == 32724
-
-    # # properties:amazonia
-    # assert smeta["properties"]["amazonia:data_type"] == "L4"
-    # assert smeta["properties"]["amazonia:path"] == 33
-    # assert smeta["properties"]["amazonia:row"] == 18
-
-    # # assets
-    # assert (
-    #     smeta["assets"]["thumbnail"]["href"]
-    #     == "https://s3.amazonaws.com/cbers-meta-pds/AMAZONIA1/WFI/033/018/"
-    #     "AMAZONIA_1_WFI_20220810_033_018_L4/AMAZONIA_1_WFI_20220810_033_018.png"
-    # )
-    # assert (
-    #     smeta["assets"]["metadata"]["href"]
-    #     == "s3://cbers-pds/AMAZONIA1/WFI/033/018/AMAZONIA_1_WFI_20220810_033_018_L4/"
-    #     "AMAZONIA_1_WFI_20220810_033_018_L4_LEFT_BAND2.xml"
-    # )
-    # assert (
-    #     smeta["assets"]["B2"]["href"]
-    #     == "s3://cbers-pds/AMAZONIA1/WFI/033/018/AMAZONIA_1_WFI_20220810_033_018_L4/"
-    #     "AMAZONIA_1_WFI_20220810_033_018_L4_LEFT_BAND2.tif"
-    # )
+    # assets
+    assert (
+        item.assets["thumbnail"].href
+        == "https://s3.amazonaws.com/amazonia-meta-pds/AMAZONIA1/WFI/033/018/"
+        "AMAZONIA_1_WFI_20220810_033_018_L4/AMAZONIA_1_WFI_20220810_033_018.png"
+    )
+    assert (
+        item.assets["metadata"].href
+        == "s3://cbers-pds/AMAZONIA1/WFI/033/018/AMAZONIA_1_WFI_20220810_033_018_L4/"
+        "AMAZONIA_1_WFI_20220810_033_018_L4_LEFT_BAND2.xml"
+    )
+    assert (
+        item.assets["B2"].href
+        == "s3://cbers-pds/AMAZONIA1/WFI/033/018/AMAZONIA_1_WFI_20220810_033_018_L4/"
+        "AMAZONIA_1_WFI_20220810_033_018_L4_LEFT_BAND2.tif"
+    )
 
     # Validate
     item.validate()
