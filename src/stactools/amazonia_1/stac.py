@@ -28,7 +28,12 @@ from pystac.extensions.sat import OrbitState, SatExtension
 from pystac.extensions.view import ViewExtension
 from pystac.summaries import Summaries
 
-from stactools.amazonia_1.constants import BASE_CAMERA, CBERS_AM_MISSIONS, TIF_XML_REGEX
+from stactools.amazonia_1.constants import (
+    BASE_CAMERA,
+    BASE_COLLECTION,
+    CBERS_AM_MISSIONS,
+    TIF_XML_REGEX,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -280,15 +285,14 @@ def _get_keys_from_cbers_am(cb_am_metadata: str) -> Dict[str, Any]:
     return metadata
 
 
-def create_collection() -> Collection:
+def create_collection(satellite: str = "AMAZONIA-1") -> Collection:
     """Create a STAC Collection
 
-    This function includes logic to extract all relevant metadata from
-    an asset describing the STAC collection and/or metadata coded into an
-    accompanying constants.py file.
+    Create an Amazonia-1 collection.
 
-    See `Collection<https://pystac.readthedocs.io/en/latest/api.html#collection>`_.
-
+    Args:
+        satellite: This will be extended to work with CBERS-4 and CBERS-4A
+                   collections.
     Returns:
         Collection: STAC Collection object
     """
@@ -325,7 +329,7 @@ def create_collection() -> Collection:
         id="AMAZONIA1-WFI",
         title="AMAZONIA1-WFI",
         description="AMAZONIA1 WFI camera collection",
-        license="CC-BY-SA-3.0",
+        license=BASE_COLLECTION["license"],
         providers=providers,
         extent=extent,
         summaries=Summaries(
@@ -352,14 +356,14 @@ def create_collection() -> Collection:
             roles=None,
         ),
     }
-    for band in CBERS_AM_MISSIONS["AMAZONIA-1"]["band"]:
+    for band in CBERS_AM_MISSIONS[satellite]["band"]:
         item_assets[band] = AssetDefinition.create(
             media_type=MediaType.COG,
             extra_fields={
                 "eo:bands": [
                     {
                         "name": band,
-                        "common_name": CBERS_AM_MISSIONS["AMAZONIA-1"]["band"][band][
+                        "common_name": CBERS_AM_MISSIONS[satellite]["band"][band][
                             "common_name"
                         ],
                     }
@@ -372,57 +376,6 @@ def create_collection() -> Collection:
     item_assets_ext.item_assets = item_assets
 
     return collection
-
-
-# Original code from cbers_2_stac, will be removed as incorporated to
-# create_item, create_collection
-
-# # Collection
-# stac_item["collection"] = cbers_am["collection"]
-
-# stac_item["links"] = []
-
-# # links, self
-# stac_item["links"].append(
-#     build_link(
-#         "self",
-#         build_absolute_prefix(
-#             buckets["stac"],
-#             cbers_am["sat_sensor"],
-#             int(cbers_am["path"]),
-#             int(cbers_am["row"]),
-#         )
-#         + stac_item["id"]
-#         + ".json",
-#     )
-# )
-
-# # links, parent
-# stac_item["links"].append(
-#     build_link(
-#         "parent",
-#         build_absolute_prefix(
-#             buckets["stac"],
-#             cbers_am["sat_sensor"],
-#             int(cbers_am["path"]),
-#             int(cbers_am["row"]),
-#         )
-#         + "catalog.json",
-#     )
-# )
-
-# # link, collection
-# stac_item["links"].append(
-#     build_link(
-#         rel="collection",
-#         href=stac_prefix
-#         + cbers_am["mission"]
-#         + cbers_am["number"]
-#         + "/"
-#         + cbers_am["sensor"]
-#         + "/collection.json",
-#     )
-# )
 
 
 def create_item(asset_href: str) -> Item:
@@ -488,7 +441,7 @@ def create_item(asset_href: str) -> Item:
     item.common_metadata.platform = cbers_am["sat_number"].lower()
     item.common_metadata.instruments = [cbers_am["sensor"]]
     item.common_metadata.gsd = BASE_CAMERA[
-        f"{cbers_am['mission']}{cbers_am['number']}"
+        f"{cbers_am['mission']}-{cbers_am['number']}"
     ][cbers_am["sensor"]]["summaries"]["gsd"][0]
 
     # view extension

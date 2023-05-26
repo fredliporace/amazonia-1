@@ -142,7 +142,7 @@ CBERS_AM_MISSIONS: Dict[str, Any] = {
 }
 
 BASE_CAMERA: Dict[str, Any] = {
-    "CBERS4": {
+    "CBERS-4": {
         "MUX": {
             "summaries": {
                 "gsd": [20.0],
@@ -240,7 +240,7 @@ BASE_CAMERA: Dict[str, Any] = {
             },
         },
     },
-    "CBERS4A": {
+    "CBERS-4A": {
         "MUX": {
             "summaries": {
                 "gsd": [16.5],
@@ -331,7 +331,7 @@ BASE_CAMERA: Dict[str, Any] = {
             },
         },
     },
-    "AMAZONIA1": {
+    "AMAZONIA-1": {
         "WFI": {
             "summaries": {
                 "gsd": [64.0],
@@ -361,4 +361,25 @@ BASE_CAMERA: Dict[str, Any] = {
             },
         },
     },
+}
+
+BASE_COLLECTION: Dict[str, Any] = {
+    "stac_extensions": [
+        "https://stac-extensions.github.io/item-assets/v1.0.0/schema.json"
+    ],
+    "license": "CC-BY-SA-3.0",
+    "providers": None,
+    "extent": {
+        "spatial": {
+            "bbox": [[-180.0, -83.0, 180.0, 83.0]],
+        },
+        "temporal": {"interval": None},
+    },
+    "summaries": {
+        "gsd": None,
+        "sat:platform_international_designator": None,
+        "sat:orbit_state": ["ascending", "descending"],
+    },
+    "links": None,
+    "item_assets": None,
 }

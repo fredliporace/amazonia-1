@@ -33,8 +33,7 @@ class CommandsTest(CliTestCase):
             assert len(jsons) == 1
 
             collection = pystac.read_file(destination)
-            assert collection.id == "my-collection-id"
-            # assert collection.other_attr...
+            assert collection.id == "AMAZONIA1-WFI"
 
             collection.validate()
 
@@ -52,6 +51,5 @@ class CommandsTest(CliTestCase):
 
             item = pystac.read_file(destination)
             assert item.id == "AMAZONIA_1_WFI_20220811_036_018_L4"
-            # assert item.other_attr...
 
             item.validate()

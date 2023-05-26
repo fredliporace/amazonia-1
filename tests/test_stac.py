@@ -8,7 +8,6 @@ from stactools.amazonia_1 import stac
 def test_create_collection() -> None:
     """test_create_collection."""
 
-    # Write tests for each for the creation of a STAC Collection
     # Create the STAC Collection...
     collection = stac.create_collection()
     collection.set_self_href("")
