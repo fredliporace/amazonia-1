@@ -22,9 +22,11 @@ from pystac import (
     TemporalExtent,
 )
 from pystac.extensions.eo import Band, EOExtension
+from pystac.extensions.item_assets import AssetDefinition, ItemAssetsExtension
 from pystac.extensions.projection import ProjectionExtension
 from pystac.extensions.sat import OrbitState, SatExtension
 from pystac.extensions.view import ViewExtension
+from pystac.summaries import Summaries
 
 from stactools.amazonia_1.constants import BASE_CAMERA, CBERS_AM_MISSIONS, TIF_XML_REGEX
 
@@ -290,31 +292,84 @@ def create_collection() -> Collection:
     Returns:
         Collection: STAC Collection object
     """
+
+    # todo:
+    # - use data from constants module
+    # - reuse AssetDefinition in item creation
+
     providers = [
         Provider(
-            name="The OS Community",
-            roles=[ProviderRole.PRODUCER, ProviderRole.PROCESSOR, ProviderRole.HOST],
-            url="https://github.com/stac-utils/stactools",
-        )
+            name="Instituto Nacional de Pesquisas Espaciais, INPE",
+            roles=[ProviderRole.PRODUCER],
+            url="http://www.inpe.br/amazonia1",
+        ),
+        Provider(
+            name="AMS Kepler",
+            roles=[ProviderRole.PROCESSOR],
+            description="Convert INPE's original TIFF to COG and copy to Amazon Web Services",
+            url="https://amskepler.com/cloud-processing.html",
+        ),
+        Provider(
+            name="Amazon Web Services",
+            roles=[ProviderRole.HOST],
+            url="https://aws.amazon.com/marketplace/pp/prodview-khrlpmr36l66s",
+        ),
     ]
 
-    # Time must be in UTC
-    demo_time = datetime.now(tz=timezone.utc)
-
     extent = Extent(
-        SpatialExtent([[-180.0, 90.0, 180.0, -90.0]]),
-        TemporalExtent([[demo_time, None]]),
+        SpatialExtent([[-180.0, -83.0, 180.0, 83.0]]),
+        TemporalExtent([[datetime(2021, 2, 28, 0, 0, 0, tzinfo=timezone.utc), None]]),
     )
 
     collection = Collection(
-        id="my-collection-id",
-        title="A dummy STAC Collection",
-        description="Used for demonstration purposes",
-        license="CC-0",
+        id="AMAZONIA1-WFI",
+        title="AMAZONIA1-WFI",
+        description="AMAZONIA1 WFI camera collection",
+        license="CC-BY-SA-3.0",
         providers=providers,
         extent=extent,
+        summaries=Summaries(
+            summaries={
+                "gsd": [64.0],
+                "sat:platform_international_designator": ["2021-015A"],
+                "sat:orbit_state": ["ascending", "descending"],
+            }
+        ),
         catalog_type=CatalogType.RELATIVE_PUBLISHED,
     )
+
+    # item_assets
+    item_assets_ext = ItemAssetsExtension.ext(collection, add_if_missing=True)
+    item_assets = {
+        # todo: why do I have to pass description and roles?
+        "thumbnail": AssetDefinition.create(
+            title="Thumbnail", media_type=MediaType.PNG, description=None, roles=None
+        ),
+        "metadata": AssetDefinition.create(
+            title="INPE original metadata",
+            media_type=MediaType.XML,
+            description=None,
+            roles=None,
+        ),
+    }
+    for band in CBERS_AM_MISSIONS["AMAZONIA-1"]["band"]:
+        item_assets[band] = AssetDefinition.create(
+            media_type=MediaType.COG,
+            extra_fields={
+                "eo:bands": [
+                    {
+                        "name": band,
+                        "common_name": CBERS_AM_MISSIONS["AMAZONIA-1"]["band"][band][
+                            "common_name"
+                        ],
+                    }
+                ]
+            },
+            title=None,
+            description=None,
+            roles=None,
+        )
+    item_assets_ext.item_assets = item_assets
 
     return collection
 
@@ -325,12 +380,6 @@ def create_collection() -> Collection:
 # # Collection
 # stac_item["collection"] = cbers_am["collection"]
 
-# # Links
-# meta_prefix = f"https://s3.amazonaws.com/{buckets['metadata']}/"
-# main_prefix = f"s3://{buckets['cog']}/"
-# stac_prefix = f"https://{buckets['stac']}.s3.amazonaws.com/"
-# # https://s3.amazonaws.com/cbers-meta-pds/CBERS4/MUX/066/096/
-# # CBERS_4_MUX_20170522_066_096_L2/CBERS_4_MUX_20170522_066_096.jpg
 # stac_item["links"] = []
 
 # # links, self
@@ -547,16 +596,5 @@ def create_item(asset_href: str) -> Item:
                 ],
             )
         ]
-
-    # Add an asset to the item (COG for example)
-    # item.add_asset(
-    #     "image",
-    #     Asset(
-    #         href=asset_href,
-    #         media_type=MediaType.COG,
-    #         roles=["data"],
-    #         title="A dummy STAC Item COG",
-    #     ),
-    # )
 
     return item
