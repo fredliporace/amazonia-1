@@ -8,14 +8,34 @@ from stactools.amazonia_1 import stac
 def test_create_collection() -> None:
     """test_create_collection."""
 
-    # Write tests for each for the creation of a STAC Collection
     # Create the STAC Collection...
     collection = stac.create_collection()
     collection.set_self_href("")
 
     # Check that it has some required attributes
-    assert collection.id == "my-collection-id"
-    # self.assertEqual(collection.other_attr...
+    assert collection.id == "AMAZONIA1-WFI"
+    assert collection.title == "AMAZONIA1-WFI"
+    assert collection.license == "CC-BY-SA-3.0"
+    assert collection.extent.spatial.bboxes == [[-180.0, -83.0, 180.0, 83.0]]
+    assert collection.extent.temporal.intervals == [
+        [datetime.datetime(2021, 2, 28, 0, 0, tzinfo=datetime.timezone.utc), None]
+    ]
+    assert collection.summaries.to_dict() == {
+        "gsd": [64.0],
+        "sat:platform_international_designator": ["2021-015A"],
+        "sat:orbit_state": ["ascending", "descending"],
+    }
+    assert collection.providers is not None
+    assert len(collection.providers) == 3
+    assert "item_assets" in collection.extra_fields.keys()
+    assert tuple(collection.extra_fields["item_assets"].keys()) == (
+        "thumbnail",
+        "metadata",
+        "B1",
+        "B2",
+        "B3",
+        "B4",
+    )
 
     # Validate
     collection.validate()

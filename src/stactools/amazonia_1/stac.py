@@ -22,11 +22,18 @@ from pystac import (
     TemporalExtent,
 )
 from pystac.extensions.eo import Band, EOExtension
+from pystac.extensions.item_assets import AssetDefinition, ItemAssetsExtension
 from pystac.extensions.projection import ProjectionExtension
 from pystac.extensions.sat import OrbitState, SatExtension
 from pystac.extensions.view import ViewExtension
+from pystac.summaries import Summaries
 
-from stactools.amazonia_1.constants import BASE_CAMERA, CBERS_AM_MISSIONS, TIF_XML_REGEX
+from stactools.amazonia_1.constants import (
+    BASE_CAMERA,
+    BASE_COLLECTION,
+    CBERS_AM_MISSIONS,
+    TIF_XML_REGEX,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -278,102 +285,97 @@ def _get_keys_from_cbers_am(cb_am_metadata: str) -> Dict[str, Any]:
     return metadata
 
 
-def create_collection() -> Collection:
+def create_collection(satellite: str = "AMAZONIA-1") -> Collection:
     """Create a STAC Collection
 
-    This function includes logic to extract all relevant metadata from
-    an asset describing the STAC collection and/or metadata coded into an
-    accompanying constants.py file.
+    Create an Amazonia-1 collection.
 
-    See `Collection<https://pystac.readthedocs.io/en/latest/api.html#collection>`_.
-
+    Args:
+        satellite: This will be extended to work with CBERS-4 and CBERS-4A
+                   collections.
     Returns:
         Collection: STAC Collection object
     """
+
+    # todo:
+    # - use data from constants module
+    # - reuse AssetDefinition in item creation
+
     providers = [
         Provider(
-            name="The OS Community",
-            roles=[ProviderRole.PRODUCER, ProviderRole.PROCESSOR, ProviderRole.HOST],
-            url="https://github.com/stac-utils/stactools",
-        )
+            name="Instituto Nacional de Pesquisas Espaciais, INPE",
+            roles=[ProviderRole.PRODUCER],
+            url="http://www.inpe.br/amazonia1",
+        ),
+        Provider(
+            name="AMS Kepler",
+            roles=[ProviderRole.PROCESSOR],
+            description="Convert INPE's original TIFF to COG and copy to Amazon Web Services",
+            url="https://amskepler.com/cloud-processing.html",
+        ),
+        Provider(
+            name="Amazon Web Services",
+            roles=[ProviderRole.HOST],
+            url="https://aws.amazon.com/marketplace/pp/prodview-khrlpmr36l66s",
+        ),
     ]
 
-    # Time must be in UTC
-    demo_time = datetime.now(tz=timezone.utc)
-
     extent = Extent(
-        SpatialExtent([[-180.0, 90.0, 180.0, -90.0]]),
-        TemporalExtent([[demo_time, None]]),
+        SpatialExtent([[-180.0, -83.0, 180.0, 83.0]]),
+        TemporalExtent([[datetime(2021, 2, 28, 0, 0, 0, tzinfo=timezone.utc), None]]),
     )
 
     collection = Collection(
-        id="my-collection-id",
-        title="A dummy STAC Collection",
-        description="Used for demonstration purposes",
-        license="CC-0",
+        id="AMAZONIA1-WFI",
+        title="AMAZONIA1-WFI",
+        description="AMAZONIA1 WFI camera collection",
+        license=BASE_COLLECTION["license"],
         providers=providers,
         extent=extent,
+        summaries=Summaries(
+            summaries={
+                "gsd": [64.0],
+                "sat:platform_international_designator": ["2021-015A"],
+                "sat:orbit_state": ["ascending", "descending"],
+            }
+        ),
         catalog_type=CatalogType.RELATIVE_PUBLISHED,
     )
 
+    # item_assets
+    item_assets_ext = ItemAssetsExtension.ext(collection, add_if_missing=True)
+    item_assets = {
+        # todo: why do I have to pass description and roles?
+        "thumbnail": AssetDefinition.create(
+            title="Thumbnail", media_type=MediaType.PNG, description=None, roles=None
+        ),
+        "metadata": AssetDefinition.create(
+            title="INPE original metadata",
+            media_type=MediaType.XML,
+            description=None,
+            roles=None,
+        ),
+    }
+    for band in CBERS_AM_MISSIONS[satellite]["band"]:
+        item_assets[band] = AssetDefinition.create(
+            media_type=MediaType.COG,
+            extra_fields={
+                "eo:bands": [
+                    {
+                        "name": band,
+                        "common_name": CBERS_AM_MISSIONS[satellite]["band"][band][
+                            "common_name"
+                        ],
+                    }
+                ]
+            },
+            title=None,
+            description=None,
+            roles=None,
+        )
+    item_assets_ext.item_assets = item_assets
+
     return collection
-
-
-# Original code from cbers_2_stac, will be removed as incorporated to
-# create_item, create_collection
-
-# # Collection
-# stac_item["collection"] = cbers_am["collection"]
-
-# # Links
-# meta_prefix = f"https://s3.amazonaws.com/{buckets['metadata']}/"
-# main_prefix = f"s3://{buckets['cog']}/"
-# stac_prefix = f"https://{buckets['stac']}.s3.amazonaws.com/"
-# # https://s3.amazonaws.com/cbers-meta-pds/CBERS4/MUX/066/096/
-# # CBERS_4_MUX_20170522_066_096_L2/CBERS_4_MUX_20170522_066_096.jpg
-# stac_item["links"] = []
-
-# # links, self
-# stac_item["links"].append(
-#     build_link(
-#         "self",
-#         build_absolute_prefix(
-#             buckets["stac"],
-#             cbers_am["sat_sensor"],
-#             int(cbers_am["path"]),
-#             int(cbers_am["row"]),
-#         )
-#         + stac_item["id"]
-#         + ".json",
-#     )
-# )
-
-# # links, parent
-# stac_item["links"].append(
-#     build_link(
-#         "parent",
-#         build_absolute_prefix(
-#             buckets["stac"],
-#             cbers_am["sat_sensor"],
-#             int(cbers_am["path"]),
-#             int(cbers_am["row"]),
-#         )
-#         + "catalog.json",
-#     )
-# )
-
-# # link, collection
-# stac_item["links"].append(
-#     build_link(
-#         rel="collection",
-#         href=stac_prefix
-#         + cbers_am["mission"]
-#         + cbers_am["number"]
-#         + "/"
-#         + cbers_am["sensor"]
-#         + "/collection.json",
-#     )
-# )
 
 
 def create_item(asset_href: str) -> Item:
@@ -439,7 +441,7 @@ def create_item(asset_href: str) -> Item:
     item.common_metadata.platform = cbers_am["sat_number"].lower()
     item.common_metadata.instruments = [cbers_am["sensor"]]
     item.common_metadata.gsd = BASE_CAMERA[
-        f"{cbers_am['mission']}{cbers_am['number']}"
+        f"{cbers_am['mission']}-{cbers_am['number']}"
     ][cbers_am["sensor"]]["summaries"]["gsd"][0]
 
     # view extension
@@ -547,16 +549,5 @@ def create_item(asset_href: str) -> Item:
                 ],
             )
         ]
-
-    # Add an asset to the item (COG for example)
-    # item.add_asset(
-    #     "image",
-    #     Asset(
-    #         href=asset_href,
-    #         media_type=MediaType.COG,
-    #         roles=["data"],
-    #         title="A dummy STAC Item COG",
-    #     ),
-    # )
 
     return item
