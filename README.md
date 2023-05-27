@@ -5,7 +5,7 @@
 - Name: amazonia-1
 - Package: `stactools.amazonia_1`
 - [stactools-amazonia-1 on PyPI](https://pypi.org/project/stactools-amazonia-1/)
-- Owner: @githubusername
+- Owner: @fredliporace
 - [Dataset homepage](https://aws.amazon.com/marketplace/pp/prodview-khrlpmr36l66s)
 - STAC extensions used:
   - [proj](https://github.com/stac-extensions/projection/)
@@ -32,13 +32,21 @@ pip install stactools-amazonia-1
 
 ## Command-line Usage
 
-Description of the command line functions
+Creating a STAC item from INPE's XML file:
 
 ```shell
-stac amazonia1 create-item source destination
+stac amazonia1 create-item SOURCE DESTINATION
 ```
 
 Use `stac amazonia1 --help` to see all subcommands and options.
+
+Creating the Amazonia-1 WFI collection:
+
+```shell
+stac amazonia1 create-collection DESTINATION
+```
+
+Use `stac amazonia1 create-collection --help` to see all subcommands and options.
 
 ## Contributing
 
