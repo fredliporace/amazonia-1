@@ -1,0 +1,131 @@
+{
+  "type": "Collection",
+  "id": "AMAZONIA1-WFI",
+  "stac_version": "1.0.0",
+  "description": "AMAZONIA1 WFI camera collection",
+  "links": [
+    {
+      "rel": "root",
+      "href": "./collection.json",
+      "type": "application/json",
+      "title": "AMAZONIA1-WFI"
+    },
+    {
+      "rel": "self",
+      "href": "/home/liporace/github/amazonia-1/examples/collection.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./AMAZONIA_1_WFI_20220810_033_018.json",
+      "type": "application/json"
+    }
+  ],
+  "stac_extensions": [
+    "https://stac-extensions.github.io/item-assets/v1.0.0/schema.json"
+  ],
+  "item_assets": {
+    "thumbnail": {
+      "title": "Thumbnail",
+      "type": "image/png"
+    },
+    "metadata": {
+      "title": "INPE original metadata",
+      "type": "application/xml"
+    },
+    "B1": {
+      "eo:bands": [
+        {
+          "name": "B1",
+          "common_name": "blue"
+        }
+      ],
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized"
+    },
+    "B2": {
+      "eo:bands": [
+        {
+          "name": "B2",
+          "common_name": "green"
+        }
+      ],
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized"
+    },
+    "B3": {
+      "eo:bands": [
+        {
+          "name": "B3",
+          "common_name": "red"
+        }
+      ],
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized"
+    },
+    "B4": {
+      "eo:bands": [
+        {
+          "name": "B4",
+          "common_name": "nir"
+        }
+      ],
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized"
+    }
+  },
+  "title": "AMAZONIA1-WFI",
+  "extent": {
+    "spatial": {
+      "bbox": [
+        [
+          -180.0,
+          -83.0,
+          180.0,
+          83.0
+        ]
+      ]
+    },
+    "temporal": {
+      "interval": [
+        [
+          "2021-02-28T00:00:00Z",
+          null
+        ]
+      ]
+    }
+  },
+  "license": "CC-BY-SA-3.0",
+  "providers": [
+    {
+      "name": "Instituto Nacional de Pesquisas Espaciais, INPE",
+      "roles": [
+        "producer"
+      ],
+      "url": "http://www.inpe.br/amazonia1"
+    },
+    {
+      "name": "AMS Kepler",
+      "description": "Convert INPE's original TIFF to COG and copy to Amazon Web Services",
+      "roles": [
+        "processor"
+      ],
+      "url": "https://amskepler.com/cloud-processing.html"
+    },
+    {
+      "name": "Amazon Web Services",
+      "roles": [
+        "host"
+      ],
+      "url": "https://aws.amazon.com/marketplace/pp/prodview-khrlpmr36l66s"
+    }
+  ],
+  "summaries": {
+    "gsd": [
+      64.0
+    ],
+    "sat:platform_international_designator": [
+      "2021-015A"
+    ],
+    "sat:orbit_state": [
+      "ascending",
+      "descending"
+    ]
+  }
+}
