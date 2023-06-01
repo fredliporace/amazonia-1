@@ -8,13 +8,17 @@
 - Owner: @fredliporace
 - [Dataset homepage](https://aws.amazon.com/marketplace/pp/prodview-khrlpmr36l66s)
 - STAC extensions used:
+  - [eo](https://github.com/stac-extensions/eo)
+  - [item-assets](https://github.com/stac-extensions/item-assets)
   - [proj](https://github.com/stac-extensions/projection/)
+  - [sat](https://github.com/stac-extensions/sat)
+  - [view](https://github.com/stac-extensions/view)
 - Extra fields:
   - `amazonia:data_type`: Product level: L2 stands for system geometric
   correction (equivalent to Landast L1GS), L4 for ortho.
   - `amazonia:path`: Path in Amazonia-1 reference grid.
   - `amazonia:row`: Row in Amazonia-1 reference grid.
-- [Browse the example in human-readable form](https://radiantearth.github.io/stac-browser/#/external/raw.githubusercontent.com/stactools-packages/amazonia-1/examples/collection.json)
+- [Browse the example in human-readable form](https://radiantearth.github.io/stac-browser/#/external/raw.githubusercontent.com/stactools-packages/amazonia-1/main/examples/collection.json)
 
 Create Amazonia-1 STAC items from INPE's original metadata format,
 using assets stored on AWS.
