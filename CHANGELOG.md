@@ -25,4 +25,10 @@ number as needed.
 
 - Nothing.
 
-[Unreleased]: <https://github.com/stactools-packages/amazonia-1/tree/main/>
+## [0.1.0] - 2023-06-01
+
+### Changed
+
+- First version
+
+[0.1.0]: <https://github.com/stactools-packages/amazonia-1/releases/tag/v0.1.0>
