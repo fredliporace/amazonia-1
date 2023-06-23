@@ -23,6 +23,24 @@ number as needed.
 
 ### Fixed
 
+- Nothing.
+
+## [0.1.1] - 2023-06-23
+
+### Added
+
+- Nothing.
+
+### Deprecated
+
+- Nothing.
+
+### Removed
+
+- Nothing.
+
+### Fixed
+
 - Fixed HREF asset parsing ([#9](https://github.com/stactools-packages/amazonia-1/issues/9)).
 
 ## [0.1.0] - 2023-06-01
@@ -31,4 +49,7 @@ number as needed.
 
 - First version
 
+[0.1.1]: <https://github.com/stactools-packages/amazonia-1/compare/v0.1.0..v0.1.1>
 [0.1.0]: <https://github.com/stactools-packages/amazonia-1/releases/tag/v0.1.0>
+
+<!-- markdownlint-disable-file MD024 -->
