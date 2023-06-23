@@ -23,7 +23,7 @@ number as needed.
 
 ### Fixed
 
-- Nothing.
+- Fixed HREF asset parsing ([#9](https://github.com/stactools-packages/amazonia-1/issues/9)).
 
 ## [0.1.0] - 2023-06-01
 
