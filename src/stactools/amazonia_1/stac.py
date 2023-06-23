@@ -27,6 +27,7 @@ from pystac.extensions.projection import ProjectionExtension
 from pystac.extensions.sat import OrbitState, SatExtension
 from pystac.extensions.view import ViewExtension
 from pystac.summaries import Summaries
+from stactools.core.io import read_text
 
 from stactools.amazonia_1.constants import (
     BASE_CAMERA,
@@ -75,7 +76,7 @@ def _get_keys_from_cbers_am(cb_am_metadata: str) -> Dict[str, Any]:
     """Extract keys from Amazonia-1 INPE's metadata.
 
     Args:
-        cb_am_metadata: CBERS/AM metadata file location
+        cb_am_metadata: CBERS/AM metadata HREF
 
     Returns:
         Item: STAC Item object
@@ -87,19 +88,18 @@ def _get_keys_from_cbers_am(cb_am_metadata: str) -> Dict[str, Any]:
     match = TIF_XML_REGEX.match(cb_am_metadata.split("/")[-1])
     assert match, f"Can't match {cb_am_metadata}"
 
-    tree = ET.parse(cb_am_metadata)
-    original_root = tree.getroot()
+    tree = ET.fromstring(text=read_text(href=cb_am_metadata))
 
     # satellite node information, checking for CBERS-04A/AMAZONIA1 WFI
     # special case
-    left_root = original_root.find("x:leftCamera", nsp)
+    left_root = tree.find("x:leftCamera", nsp)
     if left_root:
-        right_root = original_root.find("x:rightCamera", nsp)
+        right_root = tree.find("x:rightCamera", nsp)
         # We use the left camera for fields that are not camera
         # specific or are not used for STAC fields computation
         root = left_root
     else:
-        root = original_root
+        root = tree
 
     satellite = root.find("x:satellite", nsp)
 
