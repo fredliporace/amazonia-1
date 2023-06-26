@@ -55,12 +55,12 @@
       "type": "image/png"
     },
     "metadata": {
-      "href": "s3://cbers-pds/AMAZONIA1/WFI/033/018/AMAZONIA_1_WFI_20220810_033_018_L4/AMAZONIA_1_WFI_20220810_033_018_L4_LEFT_BAND2.xml",
+      "href": "s3://amazonia-pds/AMAZONIA1/WFI/033/018/AMAZONIA_1_WFI_20220810_033_018_L4/AMAZONIA_1_WFI_20220810_033_018_L4_LEFT_BAND2.xml",
       "type": "application/xml",
       "title": "INPE original metadata"
     },
     "B1": {
-      "href": "s3://cbers-pds/AMAZONIA1/WFI/033/018/AMAZONIA_1_WFI_20220810_033_018_L4/AMAZONIA_1_WFI_20220810_033_018_L4_LEFT_BAND1.tif",
+      "href": "s3://amazonia-pds/AMAZONIA1/WFI/033/018/AMAZONIA_1_WFI_20220810_033_018_L4/AMAZONIA_1_WFI_20220810_033_018_L4_LEFT_BAND1.tif",
       "type": "image/tiff; application=geotiff; profile=cloud-optimized",
       "eo:bands": [
         {
@@ -70,7 +70,7 @@
       ]
     },
     "B2": {
-      "href": "s3://cbers-pds/AMAZONIA1/WFI/033/018/AMAZONIA_1_WFI_20220810_033_018_L4/AMAZONIA_1_WFI_20220810_033_018_L4_LEFT_BAND2.tif",
+      "href": "s3://amazonia-pds/AMAZONIA1/WFI/033/018/AMAZONIA_1_WFI_20220810_033_018_L4/AMAZONIA_1_WFI_20220810_033_018_L4_LEFT_BAND2.tif",
       "type": "image/tiff; application=geotiff; profile=cloud-optimized",
       "eo:bands": [
         {
@@ -80,7 +80,7 @@
       ]
     },
     "B3": {
-      "href": "s3://cbers-pds/AMAZONIA1/WFI/033/018/AMAZONIA_1_WFI_20220810_033_018_L4/AMAZONIA_1_WFI_20220810_033_018_L4_LEFT_BAND3.tif",
+      "href": "s3://amazonia-pds/AMAZONIA1/WFI/033/018/AMAZONIA_1_WFI_20220810_033_018_L4/AMAZONIA_1_WFI_20220810_033_018_L4_LEFT_BAND3.tif",
       "type": "image/tiff; application=geotiff; profile=cloud-optimized",
       "eo:bands": [
         {
@@ -90,7 +90,7 @@
       ]
     },
     "B4": {
-      "href": "s3://cbers-pds/AMAZONIA1/WFI/033/018/AMAZONIA_1_WFI_20220810_033_018_L4/AMAZONIA_1_WFI_20220810_033_018_L4_LEFT_BAND4.tif",
+      "href": "s3://amazonia-pds/AMAZONIA1/WFI/033/018/AMAZONIA_1_WFI_20220810_033_018_L4/AMAZONIA_1_WFI_20220810_033_018_L4_LEFT_BAND4.tif",
       "type": "image/tiff; application=geotiff; profile=cloud-optimized",
       "eo:bands": [
         {

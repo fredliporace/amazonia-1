@@ -484,7 +484,7 @@ def create_item(asset_href: str) -> Item:
     # Metadata bucket
     meta_prefix = "https://s3.amazonaws.com/amazonia-meta-pds/"
     # COG bucket
-    main_prefix = "s3://cbers-pds/"
+    main_prefix = "s3://amazonia-pds/"
 
     # Thumbnail asset
     item.add_asset(
