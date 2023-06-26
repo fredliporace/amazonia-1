@@ -117,12 +117,12 @@ def test_create_item() -> None:
     )
     assert (
         item.assets["metadata"].href
-        == "s3://cbers-pds/AMAZONIA1/WFI/036/018/AMAZONIA_1_WFI_20220811_036_018_L4/"
+        == "s3://amazonia-pds/AMAZONIA1/WFI/036/018/AMAZONIA_1_WFI_20220811_036_018_L4/"
         "AMAZONIA_1_WFI_20220811_036_018_L4_BAND2.xml"
     )
     assert (
         item.assets["B2"].href
-        == "s3://cbers-pds/AMAZONIA1/WFI/036/018/AMAZONIA_1_WFI_20220811_036_018_L4/"
+        == "s3://amazonia-pds/AMAZONIA1/WFI/036/018/AMAZONIA_1_WFI_20220811_036_018_L4/"
         "AMAZONIA_1_WFI_20220811_036_018_L4_BAND2.tif"
     )
 
@@ -158,12 +158,12 @@ def test_create_item() -> None:
     )
     assert (
         item.assets["metadata"].href
-        == "s3://cbers-pds/AMAZONIA1/WFI/033/018/AMAZONIA_1_WFI_20220810_033_018_L4/"
+        == "s3://amazonia-pds/AMAZONIA1/WFI/033/018/AMAZONIA_1_WFI_20220810_033_018_L4/"
         "AMAZONIA_1_WFI_20220810_033_018_L4_LEFT_BAND2.xml"
     )
     assert (
         item.assets["B2"].href
-        == "s3://cbers-pds/AMAZONIA1/WFI/033/018/AMAZONIA_1_WFI_20220810_033_018_L4/"
+        == "s3://amazonia-pds/AMAZONIA1/WFI/033/018/AMAZONIA_1_WFI_20220810_033_018_L4/"
         "AMAZONIA_1_WFI_20220810_033_018_L4_LEFT_BAND2.tif"
     )
 
