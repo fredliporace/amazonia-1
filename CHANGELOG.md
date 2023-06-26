@@ -23,7 +23,7 @@ number as needed.
 
 ### Fixed
 
-- Nothing.
+- Fixed bucket prefix ([#13](https://github.com/stactools-packages/amazonia-1/pull/13)).
 
 ## [0.1.1] - 2023-06-23
 
