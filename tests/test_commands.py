@@ -11,7 +11,7 @@ from stactools.testing.cli_test import CliTestCase
 from stactools.amazonia_1.commands import create_amazonia1_command
 
 
-class CommandsTest(CliTestCase):
+class CommandsTest(CliTestCase):  # type: ignore
     """CommandsTest."""
 
     def create_subcommand_functions(self) -> List[Callable[[Group], Command]]:
