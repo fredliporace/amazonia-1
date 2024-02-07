@@ -11,7 +11,7 @@ number as needed.
 
 ### Added
 
-- Nothing.
+- New bucket prefix ([#15](https://github.com/stactools-packages/amazonia-1/issues/15)).
 
 ### Deprecated
 
