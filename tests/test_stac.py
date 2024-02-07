@@ -105,7 +105,7 @@ def test_create_item() -> None:
         in item.stac_extensions
     )
     assert (
-        "https://stac-extensions.github.io/eo/v1.0.0/schema.json"
+        "https://stac-extensions.github.io/eo/v1.1.0/schema.json"
         in item.stac_extensions
     )
 
