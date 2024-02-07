@@ -11,6 +11,24 @@ number as needed.
 
 ### Added
 
+- Nothing.
+
+### Deprecated
+
+- Nothing.
+
+### Removed
+
+- Nothing.
+
+### Fixed
+
+- Nothing.
+
+## [0.1.3]
+
+### Added
+
 - New bucket prefix ([#15](https://github.com/stactools-packages/amazonia-1/issues/15)).
 
 ### Deprecated
@@ -65,8 +83,7 @@ number as needed.
 
 ### Changed
 
-- First version
-
+[0.1.3]: <https://github.com/stactools-packages/amazonia-1/compare/v0.1.2..v0.1.3>
 [0.1.2]: <https://github.com/stactools-packages/amazonia-1/compare/v0.1.1..v0.1.2>
 [0.1.1]: <https://github.com/stactools-packages/amazonia-1/compare/v0.1.0..v0.1.1>
 [0.1.0]: <https://github.com/stactools-packages/amazonia-1/releases/tag/v0.1.0>

@@ -14,4 +14,4 @@ def register_plugin(registry: Registry) -> None:
     registry.register_subcommand(commands.create_amazonia1_command)
 
 
-__version__ = "0.1.2"
+__version__ = "0.1.3"
