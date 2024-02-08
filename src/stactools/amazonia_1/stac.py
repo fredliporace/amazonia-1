@@ -482,7 +482,7 @@ def create_item(asset_href: str) -> Item:
     )
 
     # Metadata bucket
-    meta_prefix = "https://brazil-eosats.s3.amazonaws.com/"
+    meta_prefix = "https://brazil-eosats.s3.us-west-2.amazonaws.com/"
     # COG bucket
     main_prefix = "s3://brazil-eosats/"
 

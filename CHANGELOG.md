@@ -11,7 +11,7 @@ number as needed.
 
 ### Added
 
-- Nothing.
+- Using regional endpoint names for quicklooks ([#15](https://github.com/stactools-packages/amazonia-1/issues/15)).
 
 ### Deprecated
 

@@ -112,7 +112,7 @@ def test_create_item() -> None:
     # assets
     assert (
         item.assets["thumbnail"].href
-        == "https://brazil-eosats.s3.amazonaws.com/AMAZONIA1/WFI/036/018/"
+        == "https://brazil-eosats.s3.us-west-2.amazonaws.com/AMAZONIA1/WFI/036/018/"
         "AMAZONIA_1_WFI_20220811_036_018_L4/AMAZONIA_1_WFI_20220811_036_018.png"
     )
     assert (
@@ -153,7 +153,7 @@ def test_create_item() -> None:
     # assets
     assert (
         item.assets["thumbnail"].href
-        == "https://brazil-eosats.s3.amazonaws.com/AMAZONIA1/WFI/033/018/"
+        == "https://brazil-eosats.s3.us-west-2.amazonaws.com/AMAZONIA1/WFI/033/018/"
         "AMAZONIA_1_WFI_20220810_033_018_L4/AMAZONIA_1_WFI_20220810_033_018.png"
     )
     assert (
